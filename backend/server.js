@@ -7,7 +7,8 @@ const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
 app.use(express.json());
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY, { apiVersion: "v1" });
+// ลบ apiVersion ออก เพื่อใช้ค่ามาตรฐานที่เสถียรกว่า
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.get("/", (req, res) => {
   res.json({ status: "CE Learning API is running 🚀" });
@@ -24,19 +25,25 @@ app.post("/api/chapter", async (req, res) => {
 วิชา: ${subjectName}
 บท: ${chapterTitle}
 
-ตอบเป็น JSON เท่านั้น ห้ามมี markdown ห้ามมี backtick:
+ตอบเป็น JSON เท่านั้น ห้ามมีคำบรรยายอื่นนอกเหนือจาก JSON ห้ามใส่ Markdown code blocks (ห้ามมี backtick):
 {"intro":"บทนำ 3-4 ประโยค","sections":[{"title":"หัวข้อ 1","content":"อธิบาย 4-5 ประโยค","code":"โค้ดตัวอย่าง 10-15 บรรทัด","lang":"python หรือ c หรือ sql หรือ html หรือ javascript"},{"title":"หัวข้อ 2","content":"...","code":"...","lang":"..."},{"title":"หัวข้อ 3","content":"...","code":"...","lang":"..."}],"keypoints":["จุด 1","จุด 2","จุด 3","จุด 4"],"quiz":[{"q":"คำถาม?","choices":["ก","ข","ค","ง"],"a":"ตัวเลือกที่ถูก","explain":"อธิบาย"},{"q":"คำถาม 2?","choices":["ก","ข","ค","ง"],"a":"ตัวเลือกที่ถูก","explain":"อธิบาย"},{"q":"คำถาม 3?","choices":["ก","ข","ค","ง"],"a":"ตัวเลือกที่ถูก","explain":"อธิบาย"}]}`;
 
     const result = await model.generateContent(prompt);
-    const raw = result.response.text();
-    const clean = raw.replace(/```[\w]*\n?/g, "").replace(/```/g, "").trim();
+    const response = await result.response;
+    const raw = response.text();
+    
+    // คลีนข้อความเผื่อ AI ใส่ Markdown มาให้
+    const clean = raw.replace(/```json/gi, "").replace(/```/gi, "").trim();
+    
     const data = JSON.parse(clean);
     res.json({ success: true, data });
   } catch (err) {
-    console.error("Error:", err.message);
+    console.error("Error details:", err);
     res.status(500).json({ error: "ไม่สามารถสร้างเนื้อหาได้: " + err.message });
   }
 });
 
+// สำหรับ Vercel: ไม่จำเป็นต้องใช้ app.listen หากทำเป็น Serverless 
+// แต่ถ้าใช้เป็น Express ปกติ ให้คงไว้ได้ครับ
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
