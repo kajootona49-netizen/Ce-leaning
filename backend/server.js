@@ -15,40 +15,36 @@ app.post("/api/chapter", async (req, res) => {
   if (!subjectName || !chapterTitle) {
     return res.status(400).json({ error: "กรุณาส่ง subjectName และ chapterTitle" });
   }
+
   try {
-    const prompt = `สร้างบทเรียนวิทยาการคอมพิวเตอร์ ปวช:
+    const prompt = `คุณคือครูสอนวิทยาการคอมพิวเตอร์ระดับ ปวช ไทย สร้างบทเรียนสำหรับ:
 วิชา: ${subjectName}
 บท: ${chapterTitle}
 
-ตอบ JSON เท่านั้น ไม่มี markdown:
-{"intro":"บทนำ 2-3 ประโยค","sections":[{"title":"หัวข้อ 1","content":"อธิบาย 3 ประโยค","code":"โค้ด 8 บรรทัด","lang":"python"},{"title":"หัวข้อ 2","content":"อธิบาย 3 ประโยค","code":"โค้ด 8 บรรทัด","lang":"python"}],"keypoints":["จุด 1","จุด 2","จุด 3"],"quiz":[{"q":"คำถาม?","choices":["ก","ข","ค","ง"],"a":"ก","explain":"อธิบาย"},{"q":"คำถาม 2?","choices":["ก","ข","ค","ง"],"a":"ข","explain":"อธิบาย"}]}`;
+ตอบเป็น JSON เท่านั้น ห้ามมี markdown:
+{"intro":"บทนำ","sections":[{"title":"หัวข้อ 1","content":"เนื้อหา","code":"โค้ด","lang":"ภาษา"}],"keypoints":["จุดสำคัญ"],"quiz":[{"q":"คำถาม","choices":["ก","ข","ค","ง"],"a":"ตัวเลือกที่ถูก","explain":"อธิบาย"}]}`;
 
-    // แก้ไข URL เป็น v1beta/models/gemini-1.5-flash (หรือตามที่คุณต้องการเปลี่ยน)
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            maxOutputTokens: 2048,
-            temperature: 0.7,
-            // เพิ่ม response_mime_type เพื่อให้ AI ตอบกลับเป็น JSON ที่ถูกต้องเสมอ
-            response_mime_type: "application/json"
-          }
-        })
-      }
-    );
+    const apiKey = process.env.GEMINI_API_KEY;
+    // เปลี่ยนรุ่นเป็น gemini-pro (1.0) เพื่อทดสอบสิทธิ์การใช้งาน
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
 
     const json = await response.json();
-    if (json.error) throw new Error(json.error.message);
+    if (json.error) {
+       return res.status(500).json({ error: "Google API Error: " + json.error.message });
+    }
     
-    // ดึงข้อมูล text จาก response
     const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const clean = raw.replace(/```json/gi, "").replace(/```/gi, "").trim();
+    const data = JSON.parse(clean);
     
-    // แปลง string เป็น JSON object (ถ้าใช้ response_mime_type มักจะไม่ติด markdown ``` มา)
-    const data = JSON.parse(raw);
     res.json({ success: true, data });
 
   } catch (err) {
