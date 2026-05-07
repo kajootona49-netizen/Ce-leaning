@@ -4,51 +4,65 @@ require("dotenv").config();
 
 const app = express();
 
-// อนุญาตให้ Frontend ทุกที่เข้าถึงได้ (หรือระบุ URL ของหน้าเว็บคุณ)
+// อนุญาตให้หน้าบ้านเข้าถึงได้
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// เช็กสถานะ Server
+// 1. หน้าแรกสำหรับเช็กว่า Server ออนไลน์หรือยัง
 app.get("/", (req, res) => {
-  res.json({ status: "CE Learning Backend is running on Render 🚀" });
+  res.send("<h1>CE Learning API is Online! 🚀</h1><p>Backend is working perfectly on Render.</p>");
 });
 
+// 2. API สำหรับสร้างเนื้อหาบทเรียน
 app.post("/api/chapter", async (req, res) => {
   const { subjectName, chapterTitle } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!subjectName || !chapterTitle) {
-    return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน (subjectName, chapterTitle)" });
+    return res.status(400).json({ error: "กรุณาส่ง subjectName และ chapterTitle มาด้วยครับ" });
   }
 
   try {
-    // ใช้ v1beta คู่กับ gemini-1.5-flash (เสถียรที่สุดสำหรับตอนนี้)
+    // ใช้ Prompt ที่บังคับให้ตอบเป็น JSON เพื่อให้หน้าบ้านเอาไปใช้ง่ายๆ
+    const prompt = `คุณคือครูสอนคอมพิวเตอร์ ปวช. ไทย สร้างบทเรียนวิชา ${subjectName} เรื่อง ${chapterTitle} 
+    ตอบเป็น JSON เท่านั้น (ห้ามมี Markdown Backticks):
+    {
+      "intro": "บทนำ",
+      "sections": [{"title": "หัวข้อ", "content": "เนื้อหา", "code": "โค้ดตัวอย่าง", "lang": "ภาษา"}],
+      "keypoints": ["จุดสำคัญ"],
+      "quiz": [{"q": "คำถาม", "choices": ["ก", "ข", "ค", "ง"], "a": "ข้อที่ถูก", "explain": "คำอธิบาย"}]
+    }`;
+
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `สร้างบทเรียนวิทยาการคอมพิวเตอร์ วิชา ${subjectName} เรื่อง ${chapterTitle} เป็น JSON` }] }]
+        contents: [{ parts: [{ text: prompt }] }]
       })
     });
 
     const result = await response.json();
 
     if (result.error) {
-      return res.status(500).json({ error: result.error.message });
+      return res.status(500).json({ error: "Google API Error: " + result.error.message });
     }
 
-    // ส่งข้อมูล JSON กลับไปที่หน้าบ้าน
-    res.json({ success: true, data: result.candidates[0].content.parts[0].text });
+    // ดึงเนื้อหาออกมาและทำความสะอาดเผื่อ AI ใส่โค้ดส่วนเกินมา
+    let rawText = result.candidates[0].content.parts[0].text;
+    const cleanJson = rawText.replace(/```json/gi, "").replace(/```/gi, "").trim();
+    const data = JSON.parse(cleanJson);
+    
+    res.json({ success: true, data });
 
   } catch (err) {
     console.error("Server Error:", err.message);
-    res.status(500).json({ error: "ระบบหลังบ้านขัดข้อง: " + err.message });
+    res.status(500).json({ error: "ขออภัย ระบบหลังบ้านขัดข้อง: " + err.message });
   }
 });
 
-// สำหรับ Render ต้องใช้ app.listen และใช้ Port ที่ระบบกำหนดให้ (process.env.PORT)
+// 3. ตั้งค่า Port สำหรับ Render (สำคัญมาก)
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Server is running on port ${PORT}`);
