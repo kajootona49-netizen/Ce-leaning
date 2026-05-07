@@ -24,7 +24,7 @@ app.post("/api/chapter", async (req, res) => {
 {"intro":"บทนำ 2-3 ประโยค","sections":[{"title":"หัวข้อ 1","content":"อธิบาย 3 ประโยค","code":"โค้ด 8 บรรทัด","lang":"python"},{"title":"หัวข้อ 2","content":"อธิบาย 3 ประโยค","code":"โค้ด 8 บรรทัด","lang":"python"}],"keypoints":["จุด 1","จุด 2","จุด 3"],"quiz":[{"q":"คำถาม?","choices":["ก","ข","ค","ง"],"a":"ก","explain":"อธิบาย"},{"q":"คำถาม 2?","choices":["ก","ข","ค","ง"],"a":"ข","explain":"อธิบาย"}]}`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
