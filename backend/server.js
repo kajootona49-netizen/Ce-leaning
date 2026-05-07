@@ -7,7 +7,7 @@ const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
 app.use(express.json());
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY, { apiVersion: "v1" });
 
 app.get("/", (req, res) => {
   res.json({ status: "CE Learning API is running 🚀" });
@@ -19,7 +19,7 @@ app.post("/api/chapter", async (req, res) => {
     return res.status(400).json({ error: "กรุณาส่ง subjectName และ chapterTitle" });
   }
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
     const prompt = `คุณคือครูสอนวิทยาการคอมพิวเตอร์ระดับ ปวช ไทย สร้างบทเรียนสำหรับ:
 วิชา: ${subjectName}
 บท: ${chapterTitle}
