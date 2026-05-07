@@ -3,7 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
-app.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -12,46 +12,36 @@ app.get("/", (req, res) => {
 
 app.post("/api/chapter", async (req, res) => {
   const { subjectName, chapterTitle } = req.body;
+  const apiKey = process.env.GEMINI_API_KEY;
+
   if (!subjectName || !chapterTitle) {
-    return res.status(400).json({ error: "กรุณาส่ง subjectName และ chapterTitle" });
+    return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน" });
   }
 
   try {
-    const prompt = `คุณคือครูสอนวิทยาการคอมพิวเตอร์ระดับ ปวช ไทย สร้างบทเรียนสำหรับ:
-วิชา: ${subjectName}
-บท: ${chapterTitle}
-
-ตอบเป็น JSON เท่านั้น ห้ามมี markdown:
-{"intro":"บทนำ","sections":[{"title":"หัวข้อ 1","content":"เนื้อหา","code":"โค้ด","lang":"ภาษา"}],"keypoints":["จุดสำคัญ"],"quiz":[{"q":"คำถาม","choices":["ก","ข","ค","ง"],"a":"ตัวเลือกที่ถูก","explain":"อธิบาย"}]}`;
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    // เปลี่ยนรุ่นเป็น gemini-pro (1.0) เพื่อทดสอบสิทธิ์การใช้งาน
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        contents: [{ parts: [{ text: `สร้างบทเรียนวิทยาการคอมพิวเตอร์ วิชา ${subjectName} เรื่อง ${chapterTitle} เป็น JSON` }] }]
       })
     });
 
-    const json = await response.json();
-    if (json.error) {
-       return res.status(500).json({ error: "Google API Error: " + json.error.message });
+    const result = await response.json();
+
+    if (result.error) {
+      return res.status(500).json({ error: result.error.message });
     }
-    
-    const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    const clean = raw.replace(/```json/gi, "").replace(/```/gi, "").trim();
-    const data = JSON.parse(clean);
-    
-    res.json({ success: true, data });
+
+    res.json({ success: true, data: result.candidates[0].content.parts[0].text });
 
   } catch (err) {
-    console.error("Error:", err.message);
-    res.status(500).json({ error: "ไม่สามารถสร้างเนื้อหาได้: " + err.message });
+    res.status(500).json({ error: "Server Error: " + err.message });
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+// --- จุดที่ต้องแก้คือตรงนี้ครับ ---
+// ลบ app.listen(PORT, ...) ของเดิมออก แล้วใช้บรรทัดนี้แทน:
+module.exports = app; 
