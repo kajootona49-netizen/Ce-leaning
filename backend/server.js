@@ -21,7 +21,7 @@ app.post("/api/chapter", async (req, res) => {
   }
   try {
     // ใช้ model gemini-1.5-flash ชื่อมาตรฐาน
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     
     const prompt = `คุณคือครูสอนวิทยาการคอมพิวเตอร์ระดับ ปวช ไทย สร้างบทเรียนสำหรับ:
 วิชา: ${subjectName}
