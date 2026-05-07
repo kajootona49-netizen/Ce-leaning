@@ -17,17 +17,12 @@ app.post("/api/chapter", async (req, res) => {
   }
 
   try {
-    const prompt = `คุณคือครูสอนวิทยาการคอมพิวเตอร์ระดับ ปวช ไทย สร้างบทเรียนสำหรับ:
-วิชา: ${subjectName}
-บท: ${chapterTitle}
-
-ตอบเป็น JSON เท่านั้น ห้ามมี markdown:
-{"intro":"บทนำ","sections":[{"title":"หัวข้อ 1","content":"เนื้อหา","code":"โค้ด","lang":"ภาษา"}],"keypoints":["จุดสำคัญ"],"quiz":[{"q":"คำถาม","choices":["ก","ข","ค","ง"],"a":"ตัวเลือกที่ถูก","explain":"อธิบาย"}]}`;
+    const prompt = `คุณคือครูสอนวิทยาการคอมพิวเตอร์ระดับ ปวช ไทย สร้างบทเรียนสำหรับ: วิชา: ${subjectName} บท: ${chapterTitle} ตอบเป็น JSON เท่านั้น: {"intro":"...","sections":[{"title":"...","content":"...","code":"...","lang":"..."}],"keypoints":[],"quiz":[]}`;
 
     const apiKey = process.env.GEMINI_API_KEY;
     
-    // เปลี่ยนเป็น gemini-pro (เวอร์ชัน 1.0) ซึ่งเสถียรที่สุดสำหรับ v1 URL
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`;
+    // เปลี่ยนกลับมาใช้ v1beta แต่ใช้ gemini-1.5-flash (คู่ที่ Google แนะนำที่สุดตอนนี้)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -39,12 +34,12 @@ app.post("/api/chapter", async (req, res) => {
 
     const result = await response.json();
 
+    // เช็กว่า Error ที่ส่งกลับมาจาก Google คืออะไรกันแน่
     if (result.error) {
-      throw new Error(result.error.message);
-    }
-
-    if (!result.candidates || !result.candidates[0].content.parts[0].text) {
-      throw new Error("AI ไม่ตอบกลับ กรุณาลองใหม่อีกครั้ง");
+      console.error("Google API Error:", result.error);
+      return res.status(result.error.code || 500).json({ 
+        error: `Google API Error: ${result.error.message}` 
+      });
     }
 
     const raw = result.candidates[0].content.parts[0].text;
@@ -54,8 +49,8 @@ app.post("/api/chapter", async (req, res) => {
     res.json({ success: true, data });
 
   } catch (err) {
-    console.error("Error Detail:", err.message);
-    res.status(500).json({ error: "ไม่สามารถสร้างเนื้อหาได้: " + err.message });
+    console.error("Server Error:", err.message);
+    res.status(500).json({ error: "ระบบขัดข้อง: " + err.message });
   }
 });
 
