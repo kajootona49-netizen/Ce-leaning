@@ -7,8 +7,8 @@ const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
 app.use(express.json());
 
-// ลบ apiVersion ออก เพื่อใช้ค่ามาตรฐานที่เสถียรกว่า
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// แก้ไขจุดนี้: ระบุ apiVersion เป็น "v1" (Stable) เพื่อป้องกัน Error 404
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY, { apiVersion: "v1" });
 
 app.get("/", (req, res) => {
   res.json({ status: "CE Learning API is running 🚀" });
@@ -20,7 +20,9 @@ app.post("/api/chapter", async (req, res) => {
     return res.status(400).json({ error: "กรุณาส่ง subjectName และ chapterTitle" });
   }
   try {
+    // ใช้ model gemini-1.5-flash ชื่อมาตรฐาน
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
     const prompt = `คุณคือครูสอนวิทยาการคอมพิวเตอร์ระดับ ปวช ไทย สร้างบทเรียนสำหรับ:
 วิชา: ${subjectName}
 บท: ${chapterTitle}
@@ -32,18 +34,16 @@ app.post("/api/chapter", async (req, res) => {
     const response = await result.response;
     const raw = response.text();
     
-    // คลีนข้อความเผื่อ AI ใส่ Markdown มาให้
+    // คลีน JSON เผื่อ AI ใส่ Markdown มาให้ (ปรับให้รองรับทั้งตัวเล็ก/ใหญ่)
     const clean = raw.replace(/```json/gi, "").replace(/```/gi, "").trim();
     
     const data = JSON.parse(clean);
     res.json({ success: true, data });
   } catch (err) {
-    console.error("Error details:", err);
+    console.error("Error Details:", err);
     res.status(500).json({ error: "ไม่สามารถสร้างเนื้อหาได้: " + err.message });
   }
 });
 
-// สำหรับ Vercel: ไม่จำเป็นต้องใช้ app.listen หากทำเป็น Serverless 
-// แต่ถ้าใช้เป็น Express ปกติ ให้คงไว้ได้ครับ
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
