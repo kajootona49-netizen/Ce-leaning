@@ -25,8 +25,9 @@ app.post("/api/chapter", async (req, res) => {
 {"intro":"บทนำ","sections":[{"title":"หัวข้อ 1","content":"เนื้อหา","code":"โค้ด","lang":"ภาษา"}],"keypoints":["จุดสำคัญ"],"quiz":[{"q":"คำถาม","choices":["ก","ข","ค","ง"],"a":"ตัวเลือกที่ถูก","explain":"อธิบาย"}]}`;
 
     const apiKey = process.env.GEMINI_API_KEY;
-    // บังคับยิงเข้า v1 โดยตรง ไม่ผ่าน SDK
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    
+    // ใช้ v1 และระบุชื่อ model เป็น gemini-1.5-flash-latest เพื่อความแม่นยำที่สุด
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -42,7 +43,11 @@ app.post("/api/chapter", async (req, res) => {
       throw new Error(result.error.message);
     }
 
-    // ดึง Text ออกจากโครงสร้างของ Google API
+    // ตรวจสอบว่ามีข้อมูลส่งกลับมาจริงไหม
+    if (!result.candidates || !result.candidates[0].content.parts[0].text) {
+      throw new Error("AI ไม่ได้ส่งข้อมูลกลับมา กรุณาลองใหม่อีกครั้ง");
+    }
+
     const raw = result.candidates[0].content.parts[0].text;
     const clean = raw.replace(/```json/gi, "").replace(/```/gi, "").trim();
     const data = JSON.parse(clean);
@@ -50,7 +55,7 @@ app.post("/api/chapter", async (req, res) => {
     res.json({ success: true, data });
 
   } catch (err) {
-    console.error("Error:", err.message);
+    console.error("Error Detail:", err.message);
     res.status(500).json({ error: "ไม่สามารถสร้างเนื้อหาได้: " + err.message });
   }
 });
