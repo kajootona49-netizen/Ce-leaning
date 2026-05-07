@@ -19,7 +19,7 @@ app.post("/api/chapter", async (req, res) => {
     return res.status(400).json({ error: "กรุณาส่ง subjectName และ chapterTitle" });
   }
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const prompt = `คุณคือครูสอนวิทยาการคอมพิวเตอร์ระดับ ปวช ไทย สร้างบทเรียนสำหรับ:
 วิชา: ${subjectName}
 บท: ${chapterTitle}
