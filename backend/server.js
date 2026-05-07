@@ -26,8 +26,8 @@ app.post("/api/chapter", async (req, res) => {
 
     const apiKey = process.env.GEMINI_API_KEY;
     
-    // ใช้ v1 และระบุชื่อ model เป็น gemini-1.5-flash-latest เพื่อความแม่นยำที่สุด
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+    // เปลี่ยนเป็น gemini-pro (เวอร์ชัน 1.0) ซึ่งเสถียรที่สุดสำหรับ v1 URL
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -43,9 +43,8 @@ app.post("/api/chapter", async (req, res) => {
       throw new Error(result.error.message);
     }
 
-    // ตรวจสอบว่ามีข้อมูลส่งกลับมาจริงไหม
     if (!result.candidates || !result.candidates[0].content.parts[0].text) {
-      throw new Error("AI ไม่ได้ส่งข้อมูลกลับมา กรุณาลองใหม่อีกครั้ง");
+      throw new Error("AI ไม่ตอบกลับ กรุณาลองใหม่อีกครั้ง");
     }
 
     const raw = result.candidates[0].content.parts[0].text;
